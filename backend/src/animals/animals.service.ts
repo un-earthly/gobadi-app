@@ -1,28 +1,22 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-
-export interface Animal {
-  id: string;
-  name: string;
-  breed: string;
-  weight: string;
-  age: string;
-  color: string;
-  image?: string;
-}
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Animal } from './animal.entity';
+export { Animal } from './animal.entity';
 
 @Injectable()
 export class AnimalsService {
-  private animals: Animal[] = [
-    { id: '1', name: 'Donald Tramp', breed: 'Albino Buffalo', weight: '725 Kg', age: '28 Months', color: 'Pinkish White' },
-    { id: '2', name: 'Kabir Cow', breed: 'Bangladeshi Cow', weight: '650 Kg', age: '24 Months', color: 'Brown' },
-  ];
+  constructor(
+    @InjectRepository(Animal)
+    private readonly animalRepository: Repository<Animal>,
+  ) {}
 
   async getAnimals(): Promise<Animal[]> {
-    return this.animals;
+    return this.animalRepository.find({ order: { id: 'ASC' } });
   }
 
   async getAnimalById(id: string): Promise<Animal> {
-    const animal = this.animals.find(a => a.id === id);
+    const animal = await this.animalRepository.findOneBy({ id: parseInt(id, 10) });
     if (!animal) {
       throw new BadRequestException('Animal not found');
     }
@@ -33,11 +27,7 @@ export class AnimalsService {
     if (!data.name || !data.breed) {
       throw new BadRequestException('Name and Breed are required');
     }
-    const newAnimal: Animal = {
-      id: String(this.animals.length + 1),
-      ...data
-    };
-    this.animals.push(newAnimal);
-    return newAnimal;
+    const newAnimal = this.animalRepository.create(data);
+    return this.animalRepository.save(newAnimal);
   }
 }

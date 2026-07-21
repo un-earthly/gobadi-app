@@ -1,38 +1,26 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-
-export interface MarketItem {
-  id: string;
-  name: string;
-  price: number;
-  category: string;
-  image: string;
-}
-
-export interface Order {
-  id: string;
-  items: Array<{ itemId: string; quantity: number }>;
-  totalPrice: number;
-  deliveryAddress: string;
-  status: string;
-}
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { MarketItem } from './market-item.entity';
+import { Order } from './order.entity';
+export { MarketItem } from './market-item.entity';
+export { Order } from './order.entity';
 
 @Injectable()
 export class MarketplaceService {
-  private catalog: MarketItem[] = [
-    { id: '1', name: 'Cattle Bhushi Mix Feed', price: 1350, category: 'Feeds', image: 'feed.png' },
-    { id: '2', name: 'Premium Milk Pail', price: 850, category: 'Milk', image: 'milk.png' },
-    { id: '3', name: 'Albenian Buffalo', price: 320000, category: 'Animals', image: 'albino_buffalo.png' },
-    { id: '4', name: 'Pure Mutton Cuts', price: 1200, category: 'Meat', image: 'meat.png' },
-  ];
-
-  private orders: Order[] = [];
+  constructor(
+    @InjectRepository(MarketItem)
+    private readonly marketItemRepository: Repository<MarketItem>,
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
+  ) {}
 
   async getCatalog(): Promise<MarketItem[]> {
-    return this.catalog;
+    return this.marketItemRepository.find({ order: { id: 'ASC' } });
   }
 
   async getCatalogItemById(id: string): Promise<MarketItem> {
-    const item = this.catalog.find(i => i.id === id);
+    const item = await this.marketItemRepository.findOneBy({ id: parseInt(id, 10) });
     if (!item) {
       throw new BadRequestException('Item not found');
     }
@@ -53,19 +41,19 @@ export class MarketplaceService {
       totalPrice += dbItem.price * itemRef.quantity;
     }
 
-    const newOrder: Order = {
-      id: `GBD-${Math.floor(100000 + Math.random() * 900000)}`,
+    const orderId = `GBD-${Math.floor(100000 + Math.random() * 900000)}`;
+    const newOrder = this.orderRepository.create({
+      id: orderId,
       items: data.items,
       totalPrice,
       deliveryAddress: data.deliveryAddress,
-      status: 'Placed'
-    };
+      status: 'Placed',
+    });
 
-    this.orders.push(newOrder);
-    return newOrder;
+    return this.orderRepository.save(newOrder);
   }
 
   async getOrders(): Promise<Order[]> {
-    return this.orders;
+    return this.orderRepository.find({ order: { id: 'DESC' } });
   }
 }
