@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { BullModule } from '@nestjs/bullmq';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import 'dotenv/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -11,6 +14,7 @@ import { MarketplaceModule } from './marketplace/marketplace.module';
 import { ChatModule } from './chat/chat.module';
 import { SeedModule } from './seed/seed.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
+import { HealthController } from './health/health.controller';
 
 @Module({
   imports: [
@@ -24,6 +28,16 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
       autoLoadEntities: true,
       synchronize: true,
     }),
+    BullModule.forRoot({
+      connection: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+      },
+    }),
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 100,
+    }]),
     RedisModule,
     AuthModule,
     AnimalsModule,
@@ -33,7 +47,13 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
     SeedModule,
     CloudinaryModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AppController, HealthController],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

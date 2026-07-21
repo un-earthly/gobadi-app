@@ -1,8 +1,11 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { MarketItem } from './market-item.entity';
 import { Order } from './order.entity';
+import { RedisService } from '../redis/redis.service';
 export { MarketItem } from './market-item.entity';
 export { Order } from './order.entity';
 
@@ -13,10 +16,30 @@ export class MarketplaceService {
     private readonly marketItemRepository: Repository<MarketItem>,
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
+    @InjectQueue('order-queue')
+    private readonly orderQueue: Queue,
+    private readonly redisService: RedisService,
   ) {}
 
   async getCatalog(): Promise<MarketItem[]> {
-    return this.marketItemRepository.find({ order: { id: 'ASC' } });
+    try {
+      const cached = await this.redisService.get('cache:marketplace:catalog');
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (err) {
+      console.warn('Failed to read catalog cache from Redis', err);
+    }
+
+    const catalog = await this.marketItemRepository.find({ order: { id: 'ASC' } });
+
+    try {
+      await this.redisService.set('cache:marketplace:catalog', JSON.stringify(catalog), 300);
+    } catch (err) {
+      console.warn('Failed to write catalog cache to Redis', err);
+    }
+
+    return catalog;
   }
 
   async getCatalogItemById(id: string): Promise<MarketItem> {
@@ -50,7 +73,21 @@ export class MarketplaceService {
       status: 'Placed',
     });
 
-    return this.orderRepository.save(newOrder);
+    const savedOrder = await this.orderRepository.save(newOrder);
+
+    // Push task to background queue via BullMQ
+    try {
+      await this.orderQueue.add('process-checkout', {
+        orderId: savedOrder.id,
+        totalPrice: savedOrder.totalPrice,
+        deliveryAddress: savedOrder.deliveryAddress,
+        items: savedOrder.items,
+      });
+    } catch (err) {
+      console.warn('Failed to push order job to BullMQ queue', err);
+    }
+
+    return savedOrder;
   }
 
   async getOrders(): Promise<Order[]> {

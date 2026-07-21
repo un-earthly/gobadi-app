@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
 
 @Entity('doctors')
 export class Doctor {
@@ -8,6 +8,7 @@ export class Doctor {
   @Column()
   name: string;
 
+  @Index()
   @Column()
   specialty: string;
 

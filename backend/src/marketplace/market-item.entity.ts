@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
 
 @Entity('market_items')
 export class MarketItem {
@@ -11,6 +11,7 @@ export class MarketItem {
   @Column('float')
   price: number;
 
+  @Index()
   @Column()
   category: string;
 

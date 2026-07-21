@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
 
 @Entity('chat_messages')
 export class ChatMessage {
@@ -11,6 +11,7 @@ export class ChatMessage {
   @Column('text')
   text: string;
 
+  @Index()
   @Column()
   time: string;
 
