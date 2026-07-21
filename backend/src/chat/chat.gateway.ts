@@ -29,7 +29,15 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   }
 
   handleConnection(client: Socket) {
-    this.logger.log(`Client connected: ${client.id}`);
+    const token = client.handshake.auth?.token || client.handshake.query?.token;
+
+    if (!token || typeof token !== 'string' || !token.startsWith('gobadi_session_token_')) {
+      this.logger.warn(`Unauthorized WebSocket connection attempt: ${client.id}. Disconnecting.`);
+      client.disconnect(true);
+      return;
+    }
+
+    this.logger.log(`Authorized client connected: ${client.id}`);
   }
 
   handleDisconnect(client: Socket) {

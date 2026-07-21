@@ -14,6 +14,12 @@ export class Order {
   @Column({ default: 'Placed' })
   status: string;
 
+  @Column({ nullable: true })
+  transactionId?: string;
+
+  @Column({ default: 'Pending' })
+  paymentStatus: string;
+
   @Column('jsonb', { nullable: true })
   items: Array<{ itemId: string; quantity: number }>;
 }

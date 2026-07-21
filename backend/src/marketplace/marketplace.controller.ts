@@ -22,6 +22,13 @@ export class MarketplaceController {
     return this.marketplaceService.checkoutOrder(body);
   }
 
+  @Post('verify-payment')
+  async verifyPayment(
+    @Body() body: { orderId: string; transactionId: string }
+  ): Promise<Order> {
+    return this.marketplaceService.verifyPayment(body.orderId, body.transactionId);
+  }
+
   @Get('orders/all')
   async getOrders(): Promise<Order[]> {
     return this.marketplaceService.getOrders();

@@ -18,6 +18,8 @@ export class MarketplaceService {
     private readonly orderRepository: Repository<Order>,
     @InjectQueue('order-queue')
     private readonly orderQueue: Queue,
+    @InjectQueue('mail-queue')
+    private readonly mailQueue: Queue,
     private readonly redisService: RedisService,
   ) {}
 
@@ -85,6 +87,37 @@ export class MarketplaceService {
       });
     } catch (err) {
       console.warn('Failed to push order job to BullMQ queue', err);
+    }
+
+    return savedOrder;
+  }
+
+  async verifyPayment(orderId: string, transactionId: string): Promise<Order> {
+    if (!orderId || !transactionId) {
+      throw new BadRequestException('Order ID and Transaction ID are required');
+    }
+
+    const order = await this.orderRepository.findOneBy({ id: orderId });
+    if (!order) {
+      throw new BadRequestException('Order not found');
+    }
+
+    order.status = 'Paid';
+    order.paymentStatus = 'Verified';
+    order.transactionId = transactionId;
+
+    const savedOrder = await this.orderRepository.save(order);
+
+    // Queue payment confirmation email asynchronously via BullMQ
+    try {
+      await this.mailQueue.add('send-payment-confirmation', {
+        email: 'user@gobadi.com',
+        orderId: savedOrder.id,
+        totalPrice: savedOrder.totalPrice,
+        transactionId,
+      });
+    } catch (err) {
+      console.warn('Failed to queue payment confirmation email job', err);
     }
 
     return savedOrder;

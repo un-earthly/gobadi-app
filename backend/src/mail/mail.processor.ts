@@ -33,5 +33,15 @@ export class MailProcessor extends WorkerHost {
       await this.mailService.sendMail(email, subject, text, html);
       return { success: true, email };
     }
+
+    if (job.name === 'send-payment-confirmation') {
+      const { email, orderId, totalPrice, transactionId } = job.data;
+      const subject = `Gobadi Order Payment Confirmed - ${orderId}`;
+      const text = `Hello,\n\nPayment for your order ${orderId} has been successfully verified!\nAmount: BDT ${totalPrice}\nTransaction ID: ${transactionId}.\n\nThank you for shopping on Gobadi!\n\nBest regards,\nGobadi App Team`;
+      const html = `<p>Hello,</p><p>Payment for your order <strong>${orderId}</strong> has been successfully verified!</p><ul><li><strong>Amount:</strong> BDT ${totalPrice}</li><li><strong>Transaction ID:</strong> ${transactionId}</li></ul><p>Thank you for shopping on Gobadi!</p><p>Best regards,<br>Gobadi App Team</p>`;
+
+      await this.mailService.sendMail(email, subject, text, html);
+      return { success: true, email };
+    }
   }
 }
