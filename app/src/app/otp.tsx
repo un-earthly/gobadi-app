@@ -1,0 +1,264 @@
+import React, { useState, useRef } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+
+export default function OTPScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  const phone = params.phone || '+88 01712-345678';
+
+  const [otp, setOtp] = useState(['5', '', '', '']); // First prefilled with '5' per mockup
+  const inputRefs = [
+    useRef<TextInput>(null),
+    useRef<TextInput>(null),
+    useRef<TextInput>(null),
+    useRef<TextInput>(null),
+  ];
+
+  const handleOtpChange = (value: string, index: number) => {
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+
+    // Auto-focus next input
+    if (value && index < 3) {
+      inputRefs[index + 1].current?.focus();
+    }
+  };
+
+  const handleKeyPress = (e: any, index: number) => {
+    if (e.nativeEvent.key === 'Backspace' && !otp[index] && index > 0) {
+      inputRefs[index - 1].current?.focus();
+    }
+  };
+
+  const handleVerify = async () => {
+    const code = otp.join('');
+    console.log(`Verifying OTP: ${code}`);
+
+    // Navigate to congo (Congratulations) screen
+    router.replace('/congo');
+  };
+
+  const handleResend = () => {
+    console.log('Resending OTP');
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        {/* Header with Back Button */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.backArrow}>‹</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+          {/* Title */}
+          <Text style={styles.title}>OTP Verification</Text>
+
+          {/* Decorative Placeholder Box */}
+          <View style={styles.placeholderBox}>
+            <View style={styles.placeholderGrid} />
+          </View>
+
+          {/* Subtitle */}
+          <Text style={styles.subtitle}>
+            Enter the verification code we just sent on your phone number
+          </Text>
+          {phone && <Text style={styles.phoneNumber}>{phone}</Text>}
+
+          {/* OTP Code Inputs */}
+          <View style={styles.otpContainer}>
+            {otp.map((digit, idx) => (
+              <TextInput
+                key={idx}
+                ref={inputRefs[idx]}
+                style={[
+                  styles.otpInput,
+                  digit ? styles.otpInputActive : styles.otpInputInactive,
+                ]}
+                value={digit}
+                onChangeText={(val) => handleOtpChange(val, idx)}
+                onKeyPress={(e) => handleKeyPress(e, idx)}
+                keyboardType="number-pad"
+                maxLength={1}
+                selectTextOnFocus
+              />
+            ))}
+          </View>
+
+          {/* Resend text */}
+          <View style={styles.resendContainer}>
+            <Text style={styles.resendText}>Didn't receive an OTP?</Text>
+            <TouchableOpacity onPress={handleResend} activeOpacity={0.7}>
+              <Text style={styles.resendLink}>Resend OTP</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Verify Button */}
+          <TouchableOpacity style={styles.verifyButton} activeOpacity={0.8} onPress={handleVerify}>
+            <Text style={styles.verifyButtonText}>Verify</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FAF9F6',
+  },
+  header: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    alignItems: 'flex-start',
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#BD632F',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#BD632F',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  backArrow: {
+    color: '#FFFFFF',
+    fontSize: 28,
+    fontWeight: '300',
+    lineHeight: 34,
+    marginTop: -2,
+  },
+  scrollContainer: {
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#BD632F',
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  placeholderBox: {
+    width: '100%',
+    height: 200,
+    borderRadius: 16,
+    backgroundColor: '#F3EFE9',
+    overflow: 'hidden',
+    marginBottom: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    opacity: 0.8,
+  },
+  placeholderGrid: {
+    width: '90%',
+    height: '90%',
+    borderColor: '#E6E1DC',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: 12,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#BD632F',
+    textAlign: 'center',
+    lineHeight: 24,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  phoneNumber: {
+    fontSize: 16,
+    color: '#1A1817',
+    fontWeight: '600',
+    marginBottom: 24,
+  },
+  otpContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+    marginBottom: 32,
+    width: '100%',
+  },
+  otpInput: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    textAlign: 'center',
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1A1817',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  otpInputActive: {
+    borderColor: '#BD632F',
+  },
+  otpInputInactive: {
+    borderColor: '#E6E1DC',
+  },
+  resendContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  resendText: {
+    fontSize: 14,
+    color: '#7C7672',
+    marginBottom: 4,
+  },
+  resendLink: {
+    fontSize: 14,
+    color: '#BD632F',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
+  verifyButton: {
+    backgroundColor: '#BD632F',
+    width: '100%',
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#BD632F',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  verifyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+});
