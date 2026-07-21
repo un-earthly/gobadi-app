@@ -14,6 +14,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 
+import { apiFetch } from '@/constants/api';
+
 export default function AddAnimalScreen() {
   const router = useRouter();
   const [step, setStep] = useState(1); // 1: Info, 2: Details, 3: Visual, 4: Pricing
@@ -53,11 +55,24 @@ export default function AddAnimalScreen() {
     setModalVisible(true);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step < 4) {
       setStep(step + 1);
     } else {
-      // Final submit
+      try {
+        await apiFetch('/animals', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: name || 'Donald Tramp',
+            breed: breed || 'Albino Buffalo',
+            weight: weight || '725 Kg',
+            age: age || '8 months',
+            color: color || 'Cream-white',
+          }),
+        });
+      } catch (err) {
+        console.log('Error adding animal:', err);
+      }
       console.log('Animal Added successfully!');
       router.replace('/(tabs)/animals');
     }

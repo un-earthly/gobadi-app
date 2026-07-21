@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,6 +9,7 @@ import {
   Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { apiFetch } from '@/constants/api';
 
 interface Doctor {
   id: string;
@@ -27,37 +28,62 @@ export default function BookSlotScreen() {
   const [selectedDay, setSelectedDay] = useState(28);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('09.00 AM');
 
-  const doctors: Record<string, Doctor> = {
-    '1': {
-      id: '1',
-      name: 'Dr. David Patel',
-      specialty: 'Veterinary Surgery',
-      location: 'Cardiology Center, USA',
-      rating: 5,
-      reviews: 1872,
-      image: require('@/assets/images/doctor.png'),
-    },
-    '2': {
-      id: '2',
-      name: 'Dr. Jessica Turner',
-      specialty: 'Veterinary Medicine',
-      location: "Women's Clinic, Seattle, USA",
-      rating: 4.9,
-      reviews: 127,
-      image: require('@/assets/images/jessica_doctor.png'),
-    },
-    '3': {
-      id: '3',
-      name: 'Dr. Michael Johnson',
-      specialty: 'Avian & Exotic Medicine',
-      location: 'Maple Associates, NY, USA',
-      rating: 4.7,
-      reviews: 5223,
-      image: require('@/assets/images/michael_doctor.png'),
-    },
-  };
+  const [doctor, setDoctor] = useState<Doctor>({
+    id: '1',
+    name: 'Dr. David Patel',
+    specialty: 'Veterinary Surgery',
+    location: 'Cardiology Center, USA',
+    rating: 5,
+    reviews: 1872,
+    image: require('@/assets/images/doctor.png'),
+  });
 
-  const doctor = doctors[String(id)] || doctors['1'];
+  useEffect(() => {
+    async function loadDoctorDetail() {
+      if (!id) return;
+      try {
+        const d = await apiFetch<{ id: string; name: string; specialty: string; rating: number; avatar: string }>(`/doctors/${id}`);
+        setDoctor({
+          id: d.id,
+          name: d.name,
+          specialty: d.specialty,
+          location: 'Uttar Badda, Dhaka',
+          rating: d.rating || 4.8,
+          reviews: 124,
+          image: d.avatar === 'jessica_doctor.png' 
+            ? require('@/assets/images/jessica_doctor.png') 
+            : require('@/assets/images/michael_doctor.png'),
+        });
+      } catch (err) {
+        console.log('Error loading doctor details:', err);
+      }
+    }
+    loadDoctorDetail();
+  }, [id]);
+
+  const handleConfirmSlot = async () => {
+    try {
+      await apiFetch('/doctors/book', {
+        method: 'POST',
+        body: JSON.stringify({
+          doctorId: doctor.id,
+          date: `2026-12-${selectedDay}`,
+          time: selectedTimeSlot,
+        }),
+      });
+    } catch (err) {
+      console.log('Error booking slot:', err);
+    }
+    router.push({
+      pathname: '/confirm-pay',
+      params: {
+        id: doctor.id,
+        timeSlot: selectedTimeSlot,
+        day: selectedDay,
+        visitType: selectedVisitType,
+      },
+    });
+  };
 
   // Custom Dec 2026 calendar data
   // Dec 1, 2026 starts on Tuesday
@@ -216,17 +242,7 @@ export default function BookSlotScreen() {
       <View style={styles.bottomBar}>
         <TouchableOpacity
           style={styles.confirmButton}
-          onPress={() =>
-            router.push({
-              pathname: '/confirm-pay',
-              params: {
-                id: doctor.id,
-                timeSlot: selectedTimeSlot,
-                day: selectedDay,
-                visitType: selectedVisitType,
-              },
-            })
-          }
+          onPress={handleConfirmSlot}
           activeOpacity={0.85}
         >
           <Text style={styles.confirmButtonText}>📅 Confirm Slot</Text>

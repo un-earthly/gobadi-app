@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,6 +10,7 @@ import {
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { apiFetch } from '@/constants/api';
 
 interface Doctor {
   id: string;
@@ -24,15 +25,7 @@ interface Doctor {
 export default function AllDoctorsScreen() {
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState('All');
-
-  const filterOptions = [
-    { label: '⚙️ Filter', value: 'filter' },
-    { label: 'All (12)', value: 'All' },
-    { label: 'Medicine(3)', value: 'Medicine' },
-    { label: 'Gynaecology(2)', value: 'Gynaecology' },
-  ];
-
-  const doctors: Doctor[] = [
+  const [doctors, setDoctors] = useState<Doctor[]>([
     {
       id: '1',
       name: 'Dr. David Patel',
@@ -60,6 +53,38 @@ export default function AllDoctorsScreen() {
       reviews: 5223,
       image: require('@/assets/images/michael_doctor.png'),
     },
+  ]);
+
+  useEffect(() => {
+    async function loadDoctors() {
+      try {
+        const dbDocs = await apiFetch<Array<{ id: string; name: string; specialty: string; rating: number; avatar: string }>>('/doctors');
+        if (dbDocs && dbDocs.length > 0) {
+          const mappedDocs = dbDocs.map((d) => ({
+            id: d.id,
+            name: d.name,
+            specialty: d.specialty,
+            location: 'Uttar Badda, Dhaka',
+            rating: d.rating || 4.8,
+            reviews: 124,
+            image: d.avatar === 'jessica_doctor.png' 
+              ? require('@/assets/images/jessica_doctor.png') 
+              : require('@/assets/images/michael_doctor.png'),
+          }));
+          setDoctors(mappedDocs);
+        }
+      } catch (err) {
+        console.log('Error loading doctors:', err);
+      }
+    }
+    loadDoctors();
+  }, []);
+
+  const filterOptions = [
+    { label: '⚙️ Filter', value: 'filter' },
+    { label: 'All (12)', value: 'All' },
+    { label: 'Medicine(3)', value: 'Medicine' },
+    { label: 'Gynaecology(2)', value: 'Gynaecology' },
   ];
 
   return (

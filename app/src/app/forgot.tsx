@@ -12,16 +12,30 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 
+import { apiFetch } from '@/constants/api';
+
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const [phone, setPhone] = useState('');
 
-  const handleSendOTP = () => {
-    // Navigate to OTP page for resetting
-    router.push({
-      pathname: '/otp',
-      params: { phone: phone || '01712345678', mode: 'reset' },
-    });
+  const handleSendOTP = async () => {
+    try {
+      const formattedPhone = phone || '01712345678';
+      const res = await apiFetch<{ success: boolean; otp?: string }>('/auth/send-otp', {
+        method: 'POST',
+        body: JSON.stringify({ phone: formattedPhone }),
+      });
+      router.push({
+        pathname: '/otp',
+        params: { phone: formattedPhone, mode: 'reset', otpHint: res.otp || '' },
+      });
+    } catch (err) {
+      console.log('Error sending OTP:', err);
+      router.push({
+        pathname: '/otp',
+        params: { phone: phone || '01712345678', mode: 'reset' },
+      });
+    }
   };
 
   return (

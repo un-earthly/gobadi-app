@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -11,6 +11,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { apiFetch } from '@/constants/api';
 
 const { width } = Dimensions.get('window');
 
@@ -28,8 +29,7 @@ interface Animal {
 export default function AnimalsListScreen() {
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState('All');
-
-  const animals: Animal[] = [
+  const [animals, setAnimals] = useState<Animal[]>([
     {
       id: '1',
       name: 'Donald Tramp',
@@ -60,17 +60,33 @@ export default function AnimalsListScreen() {
       weight: '167 Kg',
       image: require('@/assets/images/bangladeshi_cow.png'),
     },
-    {
-      id: '4',
-      name: 'Donald Tramp',
-      breed: 'Albino Buffalo',
-      desc: 'cream-colored coat and tuft of blond hair',
-      status: 'Healthy',
-      age: '8 months',
-      weight: '725 Kg',
-      image: require('@/assets/images/albino_buffalo.png'),
-    },
-  ];
+  ]);
+
+  useEffect(() => {
+    async function loadAnimals() {
+      try {
+        const dbAnimals = await apiFetch<Array<{ id: string; name: string; breed: string; weight: string; age: string; color: string }>>('/animals');
+        if (dbAnimals && dbAnimals.length > 0) {
+          const mapped = dbAnimals.map((a) => ({
+            id: a.id,
+            name: a.name,
+            breed: a.breed,
+            desc: `${a.color || 'cream'} colored coat and characteristics`,
+            status: Number(a.id) % 2 === 0 ? ('Under Treatment' as const) : ('Healthy' as const),
+            age: a.age,
+            weight: a.weight,
+            image: a.breed.toLowerCase().includes('buffalo') 
+              ? require('@/assets/images/albino_buffalo.png') 
+              : require('@/assets/images/bangladeshi_cow.png'),
+          }));
+          setAnimals(mapped);
+        }
+      } catch (err) {
+        console.log('Error loading animals:', err);
+      }
+    }
+    loadAnimals();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>

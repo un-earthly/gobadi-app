@@ -10,9 +10,26 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
+import { apiFetch } from '@/constants/api';
+
 export default function CheckoutScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+
+  const handlePlaceOrder = async () => {
+    try {
+      await apiFetch('/marketplace/checkout', {
+        method: 'POST',
+        body: JSON.stringify({
+          items: [{ itemId: String(params.id || '3'), quantity: 1 }],
+          deliveryAddress: 'Road# 9, house# 5, Lane#3, Mirpur 11/a, Dhaka-1216.',
+        }),
+      });
+    } catch (err) {
+      console.log('Error placing order:', err);
+    }
+    router.push('/order-success');
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -108,7 +125,7 @@ export default function CheckoutScreen() {
       <View style={styles.bottomBar}>
         <TouchableOpacity
           style={styles.placeOrderButton}
-          onPress={() => router.push('/order-success')}
+          onPress={handlePlaceOrder}
           activeOpacity={0.85}
         >
           <Text style={styles.placeOrderIcon}>⚙️</Text>

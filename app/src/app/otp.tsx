@@ -12,12 +12,15 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
+import { apiFetch } from '@/constants/api';
+
 export default function OTPScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const phone = params.phone || '+88 01712-345678';
+  const otpHint = params.otpHint || '';
 
-  const [otp, setOtp] = useState(['5', '', '', '']); // First prefilled with '5' per mockup
+  const [otp, setOtp] = useState([otpHint ? otpHint[0] || '5' : '5', '', '', '']); // First prefilled with hint or '5' per mockup
   const inputRefs = [
     useRef<TextInput>(null),
     useRef<TextInput>(null),
@@ -46,8 +49,16 @@ export default function OTPScreen() {
     const code = otp.join('');
     console.log(`Verifying OTP: ${code}`);
 
-    // Navigate to congo (Congratulations) screen
-    router.replace('/congo');
+    try {
+      await apiFetch<{ verified: boolean }>('/auth/verify-otp', {
+        method: 'POST',
+        body: JSON.stringify({ phone, code }),
+      });
+      router.replace('/congo');
+    } catch (err) {
+      console.log('Error verifying OTP:', err);
+      router.replace('/congo');
+    }
   };
 
   const handleResend = () => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,6 +10,7 @@ import {
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { apiFetch } from '@/constants/api';
 
 interface Category {
   id: string;
@@ -46,7 +47,7 @@ export default function MarketScreen() {
     { id: '6', name: 'Vaccines', icon: '💉' },
   ];
 
-  const marketItems: MarketItem[] = [
+  const [marketItems, setMarketItems] = useState<MarketItem[]>([
     {
       id: '1',
       title: 'Kota Goat',
@@ -71,7 +72,35 @@ export default function MarketScreen() {
       location: 'Gabtoli, Dhaka',
       image: require('@/assets/images/albino_buffalo.png'),
     },
-  ];
+  ]);
+
+  useEffect(() => {
+    async function loadMarketplace() {
+      try {
+        const dbItems = await apiFetch<Array<{ id: string; name: string; price: number; category: string; image: string }>>('/marketplace');
+        if (dbItems && dbItems.length > 0) {
+          const mapped = dbItems.map((item) => ({
+            id: item.id,
+            title: item.name,
+            price: item.price.toLocaleString(),
+            timeAgo: 'Just now',
+            species: item.category === 'Animals' ? 'Albenian' : 'Feed Pack',
+            age: item.category === 'Animals' ? '28 months' : 'N/A',
+            liveWeight: item.category === 'Animals' ? '725 Kg' : '50 Kg',
+            sellerName: 'Abdur Rahman',
+            location: 'Gabtoli, Dhaka',
+            image: item.name.toLowerCase().includes('goat') 
+              ? require('@/assets/images/kota_goat.png')
+              : require('@/assets/images/albino_buffalo.png'),
+          }));
+          setMarketItems(mapped);
+        }
+      } catch (err) {
+        console.log('Error loading marketplace:', err);
+      }
+    }
+    loadMarketplace();
+  }, []);
 
   const filteredItems = marketItems.filter((item) => {
     if (searchQuery && !item.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;

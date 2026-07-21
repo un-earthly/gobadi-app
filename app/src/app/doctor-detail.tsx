@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,6 +9,7 @@ import {
   Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { apiFetch } from '@/constants/api';
 
 interface Doctor {
   id: string;
@@ -25,41 +26,40 @@ export default function DoctorDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
 
-  const doctors: Record<string, Doctor> = {
-    '1': {
-      id: '1',
-      name: 'Dr. David Patel',
-      specialty: 'Veterinary Surgery',
-      location: 'Cardiology Center, USA',
-      rating: 5,
-      reviews: 1872,
-      image: require('@/assets/images/doctor.png'),
-      availability: '6 AM - 9 PM',
-    },
-    '2': {
-      id: '2',
-      name: 'Dr. Jessica Turner',
-      specialty: 'Veterinary Medicine',
-      location: "Women's Clinic, Seattle, USA",
-      rating: 4.9,
-      reviews: 127,
-      image: require('@/assets/images/jessica_doctor.png'),
-      availability: '8 AM - 5 PM',
-    },
-    '3': {
-      id: '3',
-      name: 'Dr. Michael Johnson',
-      specialty: 'Avian & Exotic Medicine',
-      location: 'Maple Associates, NY, USA',
-      rating: 4.7,
-      reviews: 5223,
-      image: require('@/assets/images/michael_doctor.png'),
-      availability: '9 AM - 6 PM',
-    },
-  };
+  const [doctor, setDoctor] = useState<Doctor>({
+    id: '1',
+    name: 'Dr. David Patel',
+    specialty: 'Veterinary Surgery',
+    location: 'Cardiology Center, USA',
+    rating: 5,
+    reviews: 1872,
+    image: require('@/assets/images/doctor.png'),
+    availability: '6 AM - 9 PM',
+  });
 
-  // Default to Dr. David Patel if not found
-  const doctor = doctors[String(id)] || doctors['1'];
+  useEffect(() => {
+    async function loadDoctorDetail() {
+      if (!id) return;
+      try {
+        const d = await apiFetch<{ id: string; name: string; specialty: string; rating: number; avatar: string; bio?: string }>(`/doctors/${id}`);
+        setDoctor({
+          id: d.id,
+          name: d.name,
+          specialty: d.specialty,
+          location: 'Uttar Badda, Dhaka',
+          rating: d.rating || 4.8,
+          reviews: 124,
+          image: d.avatar === 'jessica_doctor.png' 
+            ? require('@/assets/images/jessica_doctor.png') 
+            : require('@/assets/images/michael_doctor.png'),
+          availability: d.avatar === 'jessica_doctor.png' ? '8 AM - 5 PM' : '6 AM - 9 PM',
+        });
+      } catch (err) {
+        console.log('Error loading doctor details:', err);
+      }
+    }
+    loadDoctorDetail();
+  }, [id]);
 
   const specializations = [
     'Veterinary clinical medicine',
