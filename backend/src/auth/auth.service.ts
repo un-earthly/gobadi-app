@@ -1,4 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { RedisService } from '../redis/redis.service';
 
 @Injectable()
@@ -6,11 +8,15 @@ export class AuthService {
   // In-memory fallback if Redis is unavailable
   private otpMemoryFallback = new Map<string, { code: string; expiresAt: number }>();
 
-  constructor(private readonly redisService: RedisService) {}
+  constructor(
+    private readonly redisService: RedisService,
+    @InjectQueue('mail-queue')
+    private readonly mailQueue: Queue,
+  ) {}
 
   async sendOtp(phone: string): Promise<{ success: boolean; message: string; otp: string }> {
     if (!phone) {
-      throw new BadRequestException('Phone number is required');
+      throw new BadRequestException('Phone number or email is required');
     }
 
     // Generate a random 4-digit OTP
@@ -26,6 +32,18 @@ export class AuthService {
         code: otp,
         expiresAt: Date.now() + expirySeconds * 1000,
       });
+    }
+
+    // If identifier is an email address, queue an async OTP email job via BullMQ
+    if (phone.includes('@')) {
+      try {
+        await this.mailQueue.add('send-otp', {
+          email: phone,
+          otp,
+        });
+      } catch (err) {
+        console.warn('Failed to queue send-otp email job', err);
+      }
     }
 
     // Return success, including the OTP in response for development / demo purposes

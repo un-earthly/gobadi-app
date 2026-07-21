@@ -1,6 +1,8 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { Doctor } from './doctor.entity';
 import { Booking } from './booking.entity';
 export { Doctor } from './doctor.entity';
@@ -13,6 +15,8 @@ export class DoctorsService {
     private readonly doctorRepository: Repository<Doctor>,
     @InjectRepository(Booking)
     private readonly bookingRepository: Repository<Booking>,
+    @InjectQueue('mail-queue')
+    private readonly mailQueue: Queue,
   ) {}
 
   async getDoctors(): Promise<Doctor[]> {
@@ -35,7 +39,21 @@ export class DoctorsService {
       slotTime: time,
       status: 'confirmed',
     });
-    return this.bookingRepository.save(newBooking);
+    const savedBooking = await this.bookingRepository.save(newBooking);
+
+    // Queue booking confirmation email asynchronously via BullMQ
+    try {
+      await this.mailQueue.add('send-booking-confirmation', {
+        email: 'user@gobadi.com',
+        doctorName: doctor.name,
+        date: savedBooking.slotDate,
+        time: savedBooking.slotTime,
+      });
+    } catch (err) {
+      console.warn('Failed to queue booking confirmation email job', err);
+    }
+
+    return savedBooking;
   }
 
   async getBookings(): Promise<Booking[]> {

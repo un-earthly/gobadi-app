@@ -15,6 +15,7 @@ import { ChatModule } from './chat/chat.module';
 import { SeedModule } from './seed/seed.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { HealthController } from './health/health.controller';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { HealthController } from './health/health.controller';
     ChatModule,
     SeedModule,
     CloudinaryModule,
+    MailModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
